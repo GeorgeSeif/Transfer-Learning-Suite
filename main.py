@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from keras.preprocessing import image
 from keras.applications.resnet50 import ResNet50
 from keras.applications.vgg16 import VGG16
@@ -18,6 +20,8 @@ from keras import losses
 from keras.optimizers import SGD, Adam
 from keras.models import Sequential, Model
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler
+from keras.models import load_model
+
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -38,7 +42,9 @@ def str2bool(v):
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--num_epochs', type=int, default=300, help='Number of epochs to train for')
-parser.add_argument('--is_training', type=str2bool, default=True, help='Whether we are training or testing')
+parser.add_argument('--mode', type=str, default="train", help='Select "train", or "predict" mode. \
+    Note that for prediction mode you have to specify an image to run the model on.')
+parser.add_argument('--image', type=str, default=None, help='The image you want to predict on. Only valid in "predict" mode.')
 parser.add_argument('--continue_training', type=str2bool, default=False, help='Whether to continue training from a checkpoint')
 parser.add_argument('--dataset', type=str, default="Pets", help='Dataset you are using.')
 parser.add_argument('--resize_height', type=int, default=256, help='Height of cropped input image to network')
@@ -47,9 +53,9 @@ parser.add_argument('--batch_size', type=int, default=32, help='Number of images
 parser.add_argument('--dropout', type=float, default=0.5, help='Dropout ratio')
 parser.add_argument('--h_flip', type=str2bool, default=False, help='Whether to randomly flip the image horizontally for data augmentation')
 parser.add_argument('--v_flip', type=str2bool, default=False, help='Whether to randomly flip the image vertically for data augmentation')
-parser.add_argument('--brightness', type=float, default=None, help='Whether to randomly change the image brightness for data augmentation')
-parser.add_argument('--rotation', type=float, default=None, help='Whether to randomly rotate the image for data augmentation')
-parser.add_argument('--zoom', type=float, default=None, help='Whether to randomly zoom in for data augmentation')
+parser.add_argument('--rotation', type=float, default=0.0, help='Whether to randomly rotate the image for data augmentation')
+parser.add_argument('--zoom', type=float, default=0.0, help='Whether to randomly zoom in for data augmentation')
+parser.add_argument('--shear', type=float, default=0.0, help='Whether to randomly shear in for data augmentation')
 parser.add_argument('--model', type=str, default="VGG16")
 args = parser.parse_args()
 
@@ -64,19 +70,36 @@ VAL_DIR = args.dataset + "/val/"
 preprocessing_function = None
 base_model = None
 
+def save_classes(class_list):
+    target=open("./checkpoints/" + args.model + "_" + args.dataset + "_class_list.txt",'w')
+    for c in class_list:
+        target.write(c)
+        target.write("\n")
+
+def load_class_list(class_list_file):
+    class_list = []
+    with open(class_list_file, 'rb') as csvfile:
+        file_reader = csv.reader(csvfile)
+        for row in file_reader:
+            class_list.append(row)
+    return class_list
+
+
+
+
 def get_subfolders(dataset):
     subfolders = os.listdir(dataset)
     return subfolders
 
 def get_num_files(directory):
-  """Get number of files by searching directory recursively"""
-  if not os.path.exists(directory):
-    return 0
-  cnt = 0
-  for r, dirs, files in os.walk(directory):
-    for dr in dirs:
-      cnt += len(glob.glob(os.path.join(r, dr + "/*")))
-  return cnt
+    """Get number of files by searching directory recursively"""
+    if not os.path.exists(directory):
+        return 0
+    cnt = 0
+    for r, dirs, files in os.walk(directory):
+        for dr in dirs:
+            cnt += len(glob.glob(os.path.join(r, dr + "/*")))
+    return cnt
 
 
 def build_finetune_model(base_model, num_classes):
@@ -96,21 +119,23 @@ def build_finetune_model(base_model, num_classes):
     return finetune_model
 
 def plot_training(history):
-  acc = history.history['acc']
-  val_acc = history.history['val_acc']
-  loss = history.history['loss']
-  val_loss = history.history['val_loss']
-  epochs = range(len(acc))
+    acc = history.history['acc']
+    val_acc = history.history['val_acc']
+    loss = history.history['loss']
+    val_loss = history.history['val_loss']
+    epochs = range(len(acc))
 
-  plt.plot(epochs, acc, 'r.')
-  plt.plot(epochs, val_acc, 'r')
-  plt.title('Training and validation accuracy')
+    plt.plot(epochs, acc, 'r.')
+    plt.plot(epochs, val_acc, 'r')
+    plt.title('Training and validation accuracy')
 
-  plt.figure()
-  plt.plot(epochs, loss, 'r.')
-  plt.plot(epochs, val_loss, 'r-')
-  plt.title('Training and validation loss')
-  plt.show()
+    # plt.figure()
+    # plt.plot(epochs, loss, 'r.')
+    # plt.plot(epochs, val_loss, 'r-')
+    # plt.title('Training and validation loss')
+    plt.show()
+
+    plt.savefig('acc_vs_epochs.png')
 
 
 
@@ -165,44 +190,104 @@ elif args.model == "NASNetMobile":
     base_model = NASNetMobile(weights='imagenet', include_top=False, input_shape=(HEIGHT, WIDTH, 3))
 
 
-# Prepare data generators
-train_datagen =  ImageDataGenerator(
-  preprocessing_function=preprocessing_function,
-  rotation_range=30,
-  width_shift_range=0.2,
-  height_shift_range=0.2,
-  shear_range=0.2,
-  zoom_range=0.2,
-  horizontal_flip=True
-)
-val_datagen = ImageDataGenerator(
-  preprocessing_function=preprocessing_function,
-  rotation_range=30,
-  width_shift_range=0.2,
-  height_shift_range=0.2,
-  shear_range=0.2,
-  zoom_range=0.2,
-  horizontal_flip=True
-)
+
+if args.mode == "train":
+    print("\n***** Begin training *****")
+    print("Dataset -->", args.dataset)
+    print("Model -->", args.model)
+    print("Resize Height -->", args.resize_height)
+    print("Resize Width -->", args.resize_width)
+    print("Num Epochs -->", args.num_epochs)
+    print("Batch Size -->", args.batch_size)
+
+    print("Data Augmentation:")
+    print("\tVertical Flip -->", args.v_flip)
+    print("\tHorizontal Flip -->", args.h_flip)
+    print("\tRotation -->", args.rotation)
+    print("\tZooming -->", args.zoom)
+    print("\tShear -->", args.shear)
+    print("")
+
+    # Create directories if needed
+    if not os.path.isdir("checkpoints"):
+        os.makedirs("checkpoints")
+
+    # Prepare data generators
+    train_datagen =  ImageDataGenerator(
+      preprocessing_function=preprocessing_function,
+      rotation_range=args.rotation,
+      shear_range=args.shear,
+      zoom_range=args.zoom,
+      horizontal_flip=args.h_flip,
+      vertical_flip=args.v_flip
+    )
+
+    val_datagen = ImageDataGenerator(preprocessing_function=preprocessing_function)
+
+    train_generator = train_datagen.flow_from_directory(TRAIN_DIR, target_size=(HEIGHT, WIDTH), batch_size=BATCH_SIZE)
+
+    validation_generator = val_datagen.flow_from_directory(VAL_DIR, target_size=(HEIGHT, WIDTH), batch_size=BATCH_SIZE)
+
+    class_list = get_subfolders(TRAIN_DIR)
+
+    finetune_model = build_finetune_model(base_model, len(class_list))
+
+    if args.continue_training:
+        finetune_model.load_weights("./checkpoints/" + args.model + "_" + args.dataset + "_model_weights.h5")
+
+    adam = Adam(lr=0.0001)
+    finetune_model.compile(adam, loss='categorical_crossentropy', metrics=['accuracy'])
+
+    num_train_images = get_num_files(TRAIN_DIR)
+    num_val_images = get_num_files(VAL_DIR)
+
+    def lr_decay(epoch):
+        if epoch%20 == 0 and epoch!=0:
+            lr = K.get_value(model.optimizer.lr)
+            K.set_value(model.optimizer.lr, lr/2)
+            print("LR changed to {}".format(lr/2))
+        return K.get_value(model.optimizer.lr)
+
+    learning_rate_schedule = LearningRateScheduler(lr_decay)
+
+    filepath="./checkpoints/" + args.model + "_model_weights.h5"
+    checkpoint = ModelCheckpoint(filepath, monitor=["acc"], verbose=1, mode='max')
+    callbacks_list = [checkpoint]
 
 
-train_generator = train_datagen.flow_from_directory(TRAIN_DIR, target_size=(HEIGHT, WIDTH), batch_size=BATCH_SIZE)
-
-validation_generator = val_datagen.flow_from_directory(VAL_DIR, target_size=(HEIGHT, WIDTH), batch_size=BATCH_SIZE)
-
-class_list = get_subfolders(TRAIN_DIR)
-
-finetune_model = build_finetune_model(base_model, len(class_list))
-
-adam = Adam(lr=0.0001)
-finetune_model.compile(adam, loss='categorical_crossentropy', metrics=['accuracy'])
-
-num_train_images = get_num_files(TRAIN_DIR)
-num_val_images = get_num_files(VAL_DIR)
+    history = finetune_model.fit_generator(train_generator, epochs=args.num_epochs, workers=8, steps_per_epoch=num_train_images, 
+        validation_data=validation_generator, validation_steps=num_val_images, class_weight='auto', shuffle=True, callbacks=callbacks_list)
 
 
-history = finetune_model.fit_generator(train_generator, epochs=args.num_epochs, workers=8, steps_per_epoch=num_train_images, 
-    validation_data=validation_generator, validation_steps=num_val_images, class_weight='auto', shuffle=True)
+    plot_training(history)
 
+elif args.mode == "predict":
 
-plot_training(history)
+    # Create directories if needed
+    if not os.path.isdir("%s"%("Predictions")):
+            os.makedirs("%s"%("Predictions"))
+
+    if args.image is None:
+        ValueError("You must pass an image path when using prediction mode.")
+
+    image = cv2.imread(args.image,-1)
+    image = image.reshape(1, image.shape[0], image.shape[1], 3)
+
+    class_list_file = "./checkpoints/" + args.model + "_" + args.dataset + "_class_list.txt"
+
+    class_list = load_class_list(class_list_file)
+    
+    finetune_model = load_model("./checkpoints/" + args.model + "_" + args.dataset + "_model_weights.h5")
+
+    st = time.time()
+
+    out = finetune_model.predict(image)
+
+    class_prediction = np.round(out)
+    class_name = class_list[int(class_prediction)]
+
+    run_time = time.time()-st
+
+    print("Predicted class = ", class_name)
+    print("Run time = ", run_time)
+
