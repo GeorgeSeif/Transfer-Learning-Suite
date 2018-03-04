@@ -61,7 +61,7 @@ parser.add_argument('--v_flip', type=str2bool, default=False, help='Whether to r
 parser.add_argument('--rotation', type=float, default=0.0, help='Whether to randomly rotate the image for data augmentation')
 parser.add_argument('--zoom', type=float, default=0.0, help='Whether to randomly zoom in for data augmentation')
 parser.add_argument('--shear', type=float, default=0.0, help='Whether to randomly shear in for data augmentation')
-parser.add_argument('--model', type=str, default="MobileNet")
+parser.add_argument('--model', type=str, default="MobileNet", help='Your pre-trained classification model of choice')
 args = parser.parse_args()
 
 
