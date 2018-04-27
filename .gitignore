@@ -1,3 +1,4 @@
 weights/*
 Pets/*
 checkpoints/*
+*.pyc

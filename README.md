@@ -6,16 +6,33 @@
 This repository serves as a Trasnfer Learning Suite. The goal is to easily be able to implement, train, and test new Transfer Learning Classification models! 
 **Any suggestions to improve this repository, including any new segmentation models you would like to see are welcome!**
 
+You can also check out my [Semantic Segmentation Suite](https://github.com/GeorgeSeif/Semantic-Segmentation-Suite).
+
 ## Models
-The following models are currently made available:
+All of the Keras built in models are made available:
 
-
+| Model  | Size  |  Top-1 Accuracy  |  Top-5 Accuracy  |  Parameters  |  Depth  |
+| -------------     | ------------- | -------------| ------------- | ------------- | ------------- |
+| VGG16    | 528 MB    |  0.715    | 0.901    | 138,357,544    | 23    |
+| VGG19    | 549 MB    |  0.727    | 0.910    | 143,667,240    | 26    |
+| ResNet50    |  99 MB    | 0.759    | 0.929    | 25,636,712    |  168    |
+| Xception    |  88 MB    | 0.790    | 0.945    | 22,910,480     | 126    |
+| InceptionV3    | 92 MB    | 0.788    | 0.944    | 23,851,784    |  159    |
+| InceptionResNetV2    | 215 MB    |  0.804    | 0.953   | 55,873,736    |  572    |
+| MobileNet    | 17 MB    | 0.665    | 0.871    | 4,253,864    | 88    |
+| DenseNet121    | 33 MB    | 0.745    | 0.918    | 8,062,504    | 121    |
+| DenseNet169    | 57 MB    | 0.759    | 0.928    | 14,307,880    |  169    |
+| DenseNet201    | 80 MB    | 0.770    | 0.933    | 20,242,984    |  201    |
+| NASNetMobile    | 21 MB    | NA    | NA    | 5,326,716    |  NA    |
+| NASNetLarge    | 342 MB    | NA    | NA    | 88,949,818    |  NA    |
 
 
 ## Files and Directories
 
 
 - **main.py:** Training and Prediction mode
+
+- **utils.py:** Helper utility functions
 
 - **checkpoints:** Checkpoint files for each epoch during training
 
@@ -93,7 +110,3 @@ optional arguments:
 
 ```
     
-
-## Results
-
-These are some **sample results** for the Cats and Dogs dataset with 2 classes.
