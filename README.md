@@ -3,8 +3,8 @@
 ## News
 
 ## Description
-This repository serves as a Trasnfer Learning Suite. The goal is to easily be able to implement, train, and test new Transfer Learning Classification models! 
-**Any suggestions to improve this repository, including any new segmentation models you would like to see are welcome!**
+This repository serves as a Trasnfer Learning Suite. The goal is to easily be able to perform transfer learning using any built-in Keras image classification model! 
+**Any suggestions to improve this repository or any new features you would like to see are welcome!**
 
 You can also check out my [Semantic Segmentation Suite](https://github.com/GeorgeSeif/Semantic-Segmentation-Suite).
 
