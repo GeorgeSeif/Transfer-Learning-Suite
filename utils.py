@@ -53,13 +53,13 @@ def get_num_files(directory):
     return cnt
 
 # Add on new FC layers with dropout for fine tuning
-def build_finetune_model(base_model, dropout, num_fc_layers, num_classes):
+def build_finetune_model(base_model, dropout, fc_layers, num_classes):
     for layer in base_model.layers:
         layer.trainable = False
 
     x = base_model.output
     x = Flatten()(x)
-    for fc in num_fc_layers:
+    for fc in fc_layers:
         x = Dense(fc, activation='relu')(x) # New FC layer, random init
         x = Dropout(dropout)(x)
 
