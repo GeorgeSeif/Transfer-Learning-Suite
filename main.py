@@ -176,7 +176,7 @@ if args.mode == "train":
     class_list = utils.get_subfolders(TRAIN_DIR)
     utils.save_class_list(class_list, model_name=args.model, dataset_name=args.dataset)
 
-    finetune_model = utils.build_finetune_model(base_model, dropout=args.dropout, num_fc_layers=FC_LAYERS, num_classes=len(class_list))
+    finetune_model = utils.build_finetune_model(base_model, dropout=args.dropout, fc_layers=FC_LAYERS, num_classes=len(class_list))
 
     if args.continue_training:
         finetune_model.load_weights("./checkpoints/" + args.model + "_model_weights.h5")
